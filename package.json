@@ -1,6 +1,6 @@
 {
   "name": "magpie-page-channel-value",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Compare model providers by estimated debit, cache and latency in Magpie.",
   "repository": { "type": "git", "url": "git+https://github.com/KaranocaVe/magpie-channel-value.git" },
@@ -12,6 +12,7 @@
       "title": "Channel Value",
       "titles": { "zh": "渠道性价比" },
       "file": "page/index.html",
+      "icon": "page/icon.png",
       "service": { "port": 3491, "option": "port" }
     },
     "options": { "port": 3491 },
