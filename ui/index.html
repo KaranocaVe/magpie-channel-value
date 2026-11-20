@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="channel-value-token" content="__PAGE_TOKEN__">
+  <title>渠道性价比</title>
+  <link rel="stylesheet" href="./style.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header class="heading">
+      <div>
+        <h1>渠道性价比</h1>
+        <p>按同一模型比较扣帐、缓存和响应速度。</p>
+      </div>
+      <button id="refresh" type="button">刷新</button>
+    </header>
+
+    <section class="toolbar" aria-label="筛选">
+      <label>模型 <select id="model" aria-label="模型"></select></label>
+      <label>时间 <select id="period">
+        <option value="last:24h">最近 24 小时</option>
+        <option value="today">今天</option>
+        <option value="7d">近 7 天</option>
+        <option value="30d">近 30 天</option>
+      </select></label>
+      <label class="checkbox"><input type="checkbox" id="show-all"> 显示未配置倍率的渠道</label>
+    </section>
+
+    <p id="notice" role="status" aria-live="polite">正在读取 Magpie 用量…</p>
+    <div id="results" hidden>
+      <div class="summary" id="summary" hidden>
+        <div>
+          <div class="eyebrow">估算扣帐最低</div>
+          <div class="winner" id="winner"></div>
+          <div id="winner-detail" class="muted"></div>
+        </div>
+        <div class="price">
+          <strong id="winner-price"></strong>
+          <span class="muted">美元等值 / 百万输入 tokens</span>
+        </div>
+      </div>
+
+      <section aria-labelledby="comparison-title">
+        <div class="section-head">
+          <h2 id="comparison-title">渠道对比</h2>
+          <small id="as-of"></small>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">渠道</th>
+                <th scope="col" data-sort="unit" aria-sort="ascending"><button type="button">扣帐 / 百万输入 <span aria-hidden="true">↑</span></button></th>
+                <th scope="col" data-sort="hit"><button type="button">缓存命中</button></th>
+                <th scope="col" data-sort="total"><button type="button">扣帐合计</button></th>
+                <th scope="col" data-sort="calls"><button type="button">请求数</button></th>
+                <th scope="col" data-sort="ttft"><button type="button">首 token</button></th>
+                <th scope="col" data-sort="decode"><button type="button">生成速度</button></th>
+              </tr>
+            </thead>
+            <tbody id="channels"></tbody>
+          </table>
+        </div>
+        <p id="empty" hidden>当前筛选没有渠道。可切换时间、模型，或显示未配置倍率的渠道。</p>
+        <p class="footnote">扣帐估算 = Magpie 用量成本 × 渠道倍率。单位扣帐以包含缓存的全部输入为分母，成本包含输出，以及 Magpie 识别的长上下文和速度档位。排序按观测流量计算。</p>
+      </section>
+
+      <details id="rate-panel">
+        <summary>渠道倍率</summary>
+        <p class="muted">默认从渠道名称末尾的小数倍率读取。手动倍率覆盖名称，对所选时间范围内的记录统一生效。</p>
+        <div id="rates">
+          <div class="rate-fields" id="rate-fields"></div>
+          <div class="rate-actions">
+            <button id="save-rates" type="button">保存倍率</button>
+            <small id="rate-status" role="status"></small>
+          </div>
+        </div>
+      </details>
+    </div>
+  </main>
+</body>
+</html>
