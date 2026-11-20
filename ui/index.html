@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="auto">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,45 +10,31 @@
 </head>
 <body>
   <main>
-    <header class="heading">
-      <div>
-        <h1>渠道性价比</h1>
-        <p>按同一模型比较扣帐、缓存和响应速度。</p>
-      </div>
-      <button id="refresh" type="button">刷新</button>
-    </header>
-
     <section class="toolbar" aria-label="筛选">
-      <label>模型 <select id="model" aria-label="模型"></select></label>
-      <label>时间 <select id="period">
-        <option value="last:24h">最近 24 小时</option>
-        <option value="today">今天</option>
-        <option value="7d">近 7 天</option>
-        <option value="30d">近 30 天</option>
-      </select></label>
-      <label class="checkbox"><input type="checkbox" id="show-all"> 显示未配置倍率的渠道</label>
+      <label>模型 <select id="model" disabled></select></label>
+      <div class="periods" role="group" aria-label="时间范围">
+        <button type="button" data-period="today" aria-pressed="false">今天</button>
+        <button type="button" data-period="last:24h" aria-pressed="true">24 小时</button>
+        <button type="button" data-period="7d" aria-pressed="false">7 天</button>
+        <button type="button" data-period="30d" aria-pressed="false">30 天</button>
+      </div>
+      <label class="muted"><input type="checkbox" id="show-all"> 显示未配置倍率的渠道</label>
+      <button id="refresh" type="button">刷新</button>
     </section>
 
     <p id="notice" role="status" aria-live="polite">正在读取 Magpie 用量…</p>
     <div id="results" hidden>
-      <div class="summary" id="summary" hidden>
-        <div>
-          <div class="eyebrow">估算扣帐最低</div>
-          <div class="winner" id="winner"></div>
-          <div id="winner-detail" class="muted"></div>
-        </div>
-        <div class="price">
-          <strong id="winner-price"></strong>
-          <span class="muted">美元等值 / 百万输入 tokens</span>
-        </div>
-      </div>
-
-      <section aria-labelledby="comparison-title">
-        <div class="section-head">
-          <h2 id="comparison-title">渠道对比</h2>
+      <section aria-label="渠道对比">
+        <div class="table-caption">
+          <div id="summary" class="winner-summary" hidden>
+            <small>单位扣帐最低</small>
+            <strong id="winner"></strong>
+            <span id="winner-price"></span>
+            <small id="winner-detail"></small>
+          </div>
           <small id="as-of"></small>
         </div>
-        <div class="table-wrap">
+        <div class="table-wrap" role="region" aria-label="渠道比较表" tabindex="0">
           <table>
             <thead>
               <tr>

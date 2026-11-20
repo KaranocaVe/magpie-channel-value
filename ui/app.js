@@ -1,12 +1,36 @@
 const byId = id => document.getElementById(id);
 const token = document.querySelector('meta[name="channel-value-token"]').content;
-const theme = new URLSearchParams(location.search).get("theme");
-if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+const root = document.documentElement;
+const initialTheme = new URLSearchParams(location.search).get("theme");
+const themeTokens = ["bg", "card", "fg", "fg-2", "muted", "line", "accent", "accent-soft", "red", "font", "code"];
+
+if (initialTheme === "light" || initialTheme === "dark") root.style.colorScheme = initialTheme;
+if (parent !== window) {
+  // The launcher and the service share a WindowProxy. Rejoin the Page
+  // bridge after navigating so the service receives live theme changes.
+  const themeRequest = "channel-value-theme";
+  addEventListener("message", event => {
+    if (event.source !== parent || event.data?.magpie !== 1) return;
+    const message = event.data;
+    const theme = message.event === "theme" ? message.data : message.id === themeRequest ? message.result : null;
+    if (typeof theme?.dark !== "boolean") return;
+    root.style.colorScheme = theme.dark ? "dark" : "light only";
+    for (const key of themeTokens) {
+      const token = theme.tokens?.[key];
+      if (typeof token === "string" && token) root.style.setProperty(`--magpie-${key}`, token);
+      else root.style.removeProperty(`--magpie-${key}`);
+    }
+  });
+  parent.postMessage({ magpie: 1, id: themeRequest, method: "hello" }, "*");
+}
+
+const periodButtons = Array.from(document.querySelectorAll("[data-period]"));
 
 const state = {
   data: null,
   rates: {},
   model: "gpt-6.2-sol",
+  period: "last:24h",
   sort: "unit",
   ascending: true,
   loading: false,
@@ -75,12 +99,9 @@ function drawComparison() {
   const cheapest = shown.filter(row => row.unit !== null).sort((a, b) => a.unit - b.unit)[0];
   byId("summary").hidden = !cheapest;
   if (cheapest) {
-    const notes = [`${integers.format(cheapest.calls)} 次请求`];
-    if (cheapest.calls < 50) notes.push("样本较少");
-    if (cheapest.hit !== null) notes.push(`${percent.format(cheapest.hit)} 缓存命中`);
     byId("winner").textContent = cheapest.name;
-    byId("winner-detail").textContent = notes.join(" · ");
-    byId("winner-price").textContent = usd(cheapest.unit);
+    byId("winner-detail").textContent = cheapest.calls < 50 ? `样本较少 · ${integers.format(cheapest.calls)} 次请求` : "";
+    byId("winner-price").textContent = `${usd(cheapest.unit)} / 百万输入`;
   }
 
   shown.sort((a, b) => {
@@ -90,12 +111,11 @@ function drawComparison() {
     if (right === null) return -1;
     return (state.ascending ? left - right : right - left) || a.name.localeCompare(b.name);
   });
-  const maxUnit = Math.max(0, ...shown.map(row => row.unit ?? 0));
-  const maxHit = 1;
   const channels = byId("channels");
   channels.replaceChildren();
   for (const row of shown) {
     const tr = element("tr");
+    tr.classList.toggle("lowest", row === cheapest);
     const provider = element("th");
     provider.scope = "row";
     provider.title = row.provider;
@@ -103,11 +123,11 @@ function drawComparison() {
     const tiers = [];
     if (row.priority) tiers.push(`${integers.format(row.priority)} Priority`);
     if (row.ultrafast) tiers.push(`${integers.format(row.ultrafast)} Ultrafast`);
-    if (tiers.length) provider.append(element("small", tiers.join(" · "), "tiers"));
+    if (tiers.length) provider.append(element("small", tiers.join(" · ")));
     tr.append(provider);
-    const unit = metricCell(row.unit, maxUnit, usd, "cost");
+    const unit = element("td", row.unit === null ? "—" : usd(row.unit), "cost");
     if (row.unpriced) unit.title = `${row.unpriced} 条记录缺少价格`;
-    tr.append(unit, metricCell(row.hit, maxHit, value => percent.format(value), "cache"));
+    tr.append(unit, element("td", row.hit === null ? "—" : percent.format(row.hit)));
     const total = element("td", row.total === null ? "—" : usd(row.total));
     total.append(element("small", `${tokens.format(row.prompt)} 输入`));
     total.title = `Magpie 成本 $${row.baseCost.toFixed(3)} · ${integers.format(row.output)} 输出 tokens`;
@@ -133,18 +153,6 @@ function drawComparison() {
       button.append(arrow);
     }
   }
-}
-
-function metricCell(value, maximum, format, type) {
-  const cell = element("td", value === null ? "—" : format(value), type);
-  if (value !== null && maximum > 0) {
-    const meter = element("meter");
-    meter.max = maximum;
-    meter.value = value;
-    meter.setAttribute("aria-hidden", "true");
-    cell.append(meter);
-  }
-  return cell;
 }
 
 function drawRates() {
@@ -183,11 +191,14 @@ async function load(refresh = false) {
   if (state.loading) return;
   state.loading = true;
   byId("refresh").disabled = true;
-  byId("period").disabled = true;
+  for (const button of periodButtons) {
+    button.disabled = true;
+    button.setAttribute("aria-pressed", String(button.dataset.period === state.period));
+  }
   byId("notice").textContent = "正在读取 Magpie 用量…";
   byId("notice").hidden = false;
   byId("notice").className = "";
-  const query = new URLSearchParams({ period: byId("period").value, refresh: refresh ? "1" : "0" });
+  const query = new URLSearchParams({ period: state.period, refresh: refresh ? "1" : "0" });
   try {
     const data = await api(`api/usage?${query}`);
     state.data = { ...data, names: new Map(data.providers.map(({ id, name }) => [id, name])) };
@@ -203,12 +214,18 @@ async function load(refresh = false) {
   } finally {
     state.loading = false;
     byId("refresh").disabled = false;
-    byId("period").disabled = false;
+    for (const button of periodButtons) button.disabled = false;
   }
 }
 
 byId("refresh").addEventListener("click", () => load(true));
-byId("period").addEventListener("change", () => load());
+for (const button of periodButtons) {
+  button.addEventListener("click", () => {
+    if (state.loading || state.period === button.dataset.period) return;
+    state.period = button.dataset.period;
+    load();
+  });
+}
 byId("model").addEventListener("change", event => {
   state.model = event.target.value;
   drawComparison();
@@ -228,6 +245,7 @@ byId("save-rates").addEventListener("click", async event => {
   const button = event.currentTarget;
   const status = byId("rate-status");
   button.disabled = true;
+  status.classList.remove("error");
   status.textContent = "保存中…";
   try {
     const updates = new Map(Object.entries(state.rates));
@@ -247,6 +265,7 @@ byId("save-rates").addEventListener("click", async event => {
     status.textContent = "已保存";
   } catch (error) {
     status.textContent = error.message;
+    status.classList.add("error");
   } finally {
     button.disabled = false;
   }

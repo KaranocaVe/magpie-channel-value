@@ -1,12 +1,12 @@
 {
   "name": "magpie-page-channel-value",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Compare model providers by estimated debit, cache and latency in Magpie.",
   "repository": { "type": "git", "url": "git+https://github.com/KaranocaVe/magpie-channel-value.git" },
   "type": "module",
   "main": "service.js",
-  "files": ["service.js", "page", "ui", "README.md", "README.zh-CN.md"],
+  "files": ["service.js", "page", "ui", "README.md", "README.zh-CN.md", "THIRD_PARTY_NOTICES.md"],
   "magpie": {
     "page": {
       "title": "Channel Value",
